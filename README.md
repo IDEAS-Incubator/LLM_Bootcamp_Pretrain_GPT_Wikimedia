@@ -2,6 +2,11 @@
 
 This README provides instructions for training a GPT model using the `gpt_train.py` script on a Wikipedia dataset.
 
+## GPT Architecture Model 
+
+![GPT Architecture](assest/GPT-2-architecture.ppm)
+
+
 ## Overview
 
 The `gpt_train.py` script implements a training routine for a Generative Pre-trained Transformer (GPT) model using PyTorch. The model is trained on a dataset derived from Wikipedia, allowing it to generate coherent text based on the patterns learned during training.
@@ -20,7 +25,7 @@ The `gpt_train.py` script implements a training routine for a Generative Pre-tra
 1. **Clone the Repository:**
 
    ```bash
-   git clone https://github.com/yourusername/your-repo.git
+   git clone https://github.com/bayesianinstitute/gpt_train.git
    cd your-repo
    ```
 

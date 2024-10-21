@@ -1,5 +1,5 @@
 import torch
-from LLM.Train.transformer import GPTModel, generate_text_simple
+from transformer import GPTModel, generate_text_simple
 import tiktoken
 
 
