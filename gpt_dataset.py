@@ -12,7 +12,7 @@ def get_data(file_path="wikipedia_data.txt"):
         logger.info("Downloading Wikipedia data...")
         # Load the Wikipedia dataset
         from datasets import load_dataset
-        dataset = load_dataset("wikipedia", "20220301.en")
+        dataset = load_dataset("wikipedia", "20220301.en", trust_remote_code=True)
         
         # Extract the 'text' field from the dataset (for example, all rows)
         text_data = dataset['train']['text']

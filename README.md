@@ -1,101 +1,128 @@
 # Training GPT Model on Wikipedia Dataset
 
-This README provides instructions for training a GPT model using the `gpt_train.py` script on a Wikipedia dataset.
+This project provides a hands-on learning experience for understanding and implementing a GPT (Generative Pre-trained Transformer) model from scratch. By training on Wikipedia data, you'll learn the fundamentals of transformer architecture, language modeling, and deep learning best practices.
 
-## GPT Architecture Model 
+## Learning Objectives
+
+By completing this project, you will:
+- Understand the core concepts of transformer architecture
+- Learn how to implement attention mechanisms
+- Master the process of training large language models
+- Gain practical experience with PyTorch
+- Learn about tokenization and text preprocessing
+- Understand model evaluation and inference
+
+## GPT Architecture Overview
+
+The GPT model architecture consists of several key components:
+
+1. **Input Processing**
+   - Tokenization using tiktoken
+   - Positional encoding
+   - Word embeddings
+
+2. **Transformer Blocks**
+   - Multi-head self-attention
+   - Layer normalization
+   - Feed-forward networks
+   - Residual connections
+
+3. **Output Layer**
+   - Language modeling head
+   - Softmax activation
 
 ![GPT Architecture](assest/GPT-2-architecture.ppm)
 
-
-## Overview
-
-The `gpt_train.py` script implements a training routine for a Generative Pre-trained Transformer (GPT) model using PyTorch. The model is trained on a dataset derived from Wikipedia, allowing it to generate coherent text based on the patterns learned during training.
-
 ## Prerequisites
 
+Before starting, ensure you have:
 - Python 3.7 or higher
-- PyTorch
-- Matplotlib
-- Loguru
-- Tiktoken
-- Access to a Wikipedia dataset (e.g., from [Wikimedia Dumps](https://huggingface.co/datasets/legacy-datasets/wikipedia))
+- Basic understanding of:
+  - Deep learning concepts
+  - PyTorch fundamentals
+  - Natural Language Processing basics
+  - Git version control
 
-## Setup
+## Required Libraries
 
-1. **Clone the Repository:**
+```bash
+conda create -n gpts python=3.12
+conda activate gpts
+pip install -r requirements.txt
+```
 
+Key dependencies:
+- PyTorch: Deep learning framework
+- Matplotlib: Visualization
+- Loguru: Logging
+- Tiktoken: Tokenization
+- Datasets: Data handling
+
+## Project Structure
+
+```
+LLM_Bootcamp_Pretrain_GPT_Wikimedia/
+├── gpt_train.py      # Main training script
+├── gpt_dataset.py    # Dataset handling
+├── transformer.py    # Transformer model implementation
+├── infer.py          # Inference script
+├── requirements.txt  # Dependencies
+└── assets/          # Project resources
+```
+
+## Getting Started
+
+1. **Dataset Preparation**
    ```bash
-   git clone https://github.com/bayesianinstitute/gpt_train.git
-   cd your-repo
+   python gpt_dataset.py
    ```
+   This script downloads and preprocesses the Wikipedia dataset.
 
-2. **Install Dependencies:**
+2. **Model Configuration**
+   The model can be configured through parameters in `gpt_train.py`:
+   - Model size (number of parameters)
+   - Number of layers
+   - Attention heads
+   - Learning rate
+   - Batch size
 
-   Ensure you have the required libraries installed. You can create a `requirements.txt` file with the following content:
-
-   ```
-   torch
-   matplotlib
-   loguru
-   tiktoken
-   ```
-
-   Then run:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Download the Dataset:**
-
-    View Code in gpt_dataset which download
-
-## Usage
-
-1. **Configure the Model and Settings:**
-
-   The model configuration and training settings are defined in the `main` function of `gpt_train.py`. You can adjust the parameters in the `GPT_CONFIG_124M` and `OTHER_SETTINGS` dictionaries.
-
-2. **Run the Training Script:**
-
-   Execute the training script:
-
+3. **Training Process**
    ```bash
    python gpt_train.py
    ```
+   The training process includes:
+   - Data loading and preprocessing
+   - Model initialization
+   - Training loop with validation
+   - Loss tracking and visualization
+   - Model checkpointing
 
-   This will start the training process, logging the training and validation losses, and generating sample outputs at specified intervals.
-
-## Training Process
-
-- The script initializes the model, sets up data loaders for training and validation, and runs the training loop.
-- Training losses and validation losses are tracked and can be plotted after training.
-- The trained model is saved as `wiki_model.pth`.
-
-## Inference
-
-1. **Run the Inference Script:**
-
-   After training, you can use the `infer.py` script to generate text based on an input prompt. The model must be saved as `model.pth` after training.
-
-   Execute the inference script with an input prompt:
-
+4. **Inference**
    ```bash
-   python LLM/Train/infer.py --input "Your input text here"
+   python infer.py --input "Your input text here"
    ```
+   Test your trained model by generating text from prompts.
 
-   Replace `"Your input text here"` with the text you want the model to generate from.
+## Training Details
+
+### Hyperparameters
+- Learning rate: Adjustable based on model size
+- Batch size: Optimized for available GPU memory
+- Number of epochs: Based on dataset size
+- Warmup steps: For stable training
+- Gradient clipping: To prevent exploding gradients
+
+### Monitoring
+- Training loss
+- Validation loss
+- Learning rate schedule
+- Memory usage
+- Training speed (tokens/second)
 
 
-## Results
+## Resources for Further Learning
 
-After training, the script generates a plot of training and validation losses, saved as `loss.pdf`.
-
-## Conclusion
-
-This README provides a basic framework for training a GPT model on a Wikipedia dataset using the `gpt_train.py` script. Adjust the parameters and methods as needed for your specific use case.
-
-## References
-
-- [Tiktoken](https://pypi.org/project/tiktoken/)
-- [Wikimedia Dumps](https://huggingface.co/datasets/legacy-datasets/wikipedia)
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762)
+- [GPT-2 Paper](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf)
+- [PyTorch Documentation](https://pytorch.org/docs/stable/index.html)
+- [Hugging Face Transformers](https://huggingface.co/docs/transformers/index)
