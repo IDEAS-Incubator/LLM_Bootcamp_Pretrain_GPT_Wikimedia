@@ -34,18 +34,48 @@ def calc_loss_batch(input_batch, target_batch, model, device):
 
 def calc_loss_loader(data_loader, model, device, num_batches=None):
     total_loss = 0.
-    if len(data_loader) == 0:
+    
+    # Handle empty data_loader
+    if isinstance(data_loader, list) and len(data_loader) == 0:
         return float("nan")
-    elif num_batches is None:
-        num_batches = len(data_loader)
+    elif hasattr(data_loader, '__len__') and len(data_loader) == 0:
+        return float("nan")
+    
+    # Determine number of batches to process
+    if hasattr(data_loader, '__len__'):
+        if num_batches is None:
+            num_batches = len(data_loader)
+        else:
+            num_batches = min(num_batches, len(data_loader))
     else:
-        num_batches = min(num_batches, len(data_loader))
-    for i, (input_batch, target_batch) in enumerate(data_loader):
-        if i < num_batches:
+        # If data_loader doesn't have a length, use the provided num_batches or default to 1
+        if num_batches is None:
+            num_batches = 1
+    
+    # Handle different types of data_loader
+    if isinstance(data_loader, list):
+        # Process list of pre-loaded batches
+        for i, batch in enumerate(data_loader):
+            if i >= num_batches:
+                break
+                
+            # Check if batch is already unpacked
+            if isinstance(batch, tuple) and len(batch) == 2:
+                input_batch, target_batch = batch
+            else:
+                input_batch, target_batch = batch
+                
             loss = calc_loss_batch(input_batch, target_batch, model, device)
             total_loss += loss.item()
-        else:
-            break
+    else:
+        # Process DataLoader
+        for i, (input_batch, target_batch) in enumerate(data_loader):
+            if i >= num_batches:
+                break
+                
+            loss = calc_loss_batch(input_batch, target_batch, model, device)
+            total_loss += loss.item()
+    
     return total_loss / num_batches
 
 
@@ -83,7 +113,25 @@ def train_model_simple(model, train_loader, val_loader, optimizer, device, num_e
     for epoch in range(num_epochs):
         model.train()  # Set model to training mode
 
-        for input_batch, target_batch in train_loader:
+        # Check if train_loader is a DataLoader or a list of batches
+        if hasattr(train_loader, '__iter__') and not hasattr(train_loader, '__len__'):
+            # It's an iterable but not a DataLoader, use as is
+            batch_iterator = train_loader
+        elif isinstance(train_loader, list):
+            # It's a list of batches
+            batch_iterator = train_loader
+        else:
+            # It's a DataLoader, use as before
+            batch_iterator = train_loader
+
+        for batch in batch_iterator:
+            # Check if we're dealing with a pre-unpacked batch (list) or a DataLoader batch (tuple)
+            if isinstance(batch, tuple) and len(batch) == 2:
+                input_batch, target_batch = batch
+            else:
+                # If it's already unpacked, use directly
+                input_batch, target_batch = batch
+                
             optimizer.zero_grad()  # Reset loss gradients from previous batch iteration
             loss = calc_loss_batch(input_batch, target_batch, model, device)
             loss.backward()  # Calculate loss gradients
@@ -137,8 +185,12 @@ def main(gpt_config, settings):
     # Download data if necessary
     ##############################
 
-    text_data=get_data()
-
+    # Use a much smaller dataset for faster training
+    text_data = get_data(
+        stream_mode=True, 
+        max_lines=10000,  # Limit to 1000 lines
+        max_articles=5000  # Limit to 50 articles if downloading
+    )
 
     ##############################
     # Initialize model
@@ -146,37 +198,40 @@ def main(gpt_config, settings):
 
     model = GPTModel(gpt_config)
     model.to(device)  # no assignment model = model.to(device) necessary for nn.Module classes
+    
+    # Use a faster optimizer
     optimizer = torch.optim.AdamW(
-        model.parameters(), lr=settings["learning_rate"], weight_decay=settings["weight_decay"]
+        model.parameters(), 
+        lr=settings["learning_rate"], 
+        weight_decay=settings["weight_decay"],
+        betas=(0.9, 0.95)  # Slightly modified betas for faster convergence
     )
 
     ##############################
     # Set up dataloaders
     ##############################
-
-    # Train/validation ratio
-    train_ratio = 0.90
-    split_idx = int(train_ratio * len(text_data))
-
-    train_loader = create_dataloader_v1(
-        text_data[:split_idx],
+    
+    # Create a single dataloader with more efficient settings
+    full_dataloader = create_dataloader_v1(
+        text_data,
         batch_size=settings["batch_size"],
         max_length=gpt_config["context_length"],
-        stride=gpt_config["context_length"],
+        stride=gpt_config["context_length"] // 2,  # Use smaller stride for more efficient training
         drop_last=True,
         shuffle=True,
         num_workers=0
     )
-
-    val_loader = create_dataloader_v1(
-        text_data[split_idx:],
-        batch_size=settings["batch_size"],
-        max_length=gpt_config["context_length"],
-        stride=gpt_config["context_length"],
-        drop_last=False,
-        shuffle=False,
-        num_workers=0
-    )
+    
+    # Calculate the split point (90% for training, 10% for validation)
+    total_batches = len(full_dataloader)
+    train_batches = int(0.9 * total_batches)
+    
+    # Preload batches to avoid generator overhead
+    logger.info(f"Preloading {train_batches} training batches")
+    train_loader = list(full_dataloader)[:train_batches]
+    # Small validation set
+    val_samples = min(10, total_batches - train_batches)  # Just use 10 batches for validation
+    val_loader = list(full_dataloader)[train_batches:train_batches+val_samples] if train_batches < total_batches else []
 
     ##############################
     # Train model
@@ -184,10 +239,14 @@ def main(gpt_config, settings):
 
     tokenizer = tiktoken.get_encoding("gpt2")
 
+    # More frequent evaluation for faster feedback
     train_losses, val_losses, tokens_seen = train_model_simple(
         model, train_loader, val_loader, optimizer, device,
-        num_epochs=settings["num_epochs"], eval_freq=5, eval_iter=1,
-        start_context="Every effort moves you", tokenizer=tokenizer
+        num_epochs=settings["num_epochs"], 
+        eval_freq=10,  # Evaluate more frequently
+        eval_iter=1,
+        start_context="Every effort moves you", 
+        tokenizer=tokenizer
     )
 
     return train_losses, val_losses, tokens_seen, model
@@ -198,20 +257,22 @@ if __name__ == "__main__":
     # Start timing
     start_time = time.time()
     
-    GPT_CONFIG_124M = {
+    # Smaller model configuration for faster training
+    GPT_CONFIG_SMALL = {
         "vocab_size": 50257,    # Vocabulary size
-        "context_length": 256,  # Shortened context length (orig: 1024)
-        "emb_dim": 768,         # Embedding dimension
-        "n_heads": 12,          # Number of attention heads
-        "n_layers": 12,         # Number of layers
+        "context_length": 128,  # Shorter context length for faster training
+        "emb_dim": 256,         # Smaller embedding dimension
+        "n_heads": 4,           # Fewer attention heads
+        "n_layers": 4,          # Fewer layers
         "drop_rate": 0.1,       # Dropout rate
         "qkv_bias": False       # Query-key-value bias
     }
 
-    OTHER_SETTINGS = {
-        "learning_rate": 5e-4,
-        "num_epochs": 10,
-        "batch_size": 2,
+    # Faster training settings
+    FAST_TRAINING_SETTINGS = {
+        "learning_rate": 1e-3,   # Higher learning rate for faster convergence
+        "num_epochs": 2,         # Fewer epochs
+        "batch_size": 4,         # Larger batch size if memory allows
         "weight_decay": 0.1
     }
 
@@ -219,20 +280,20 @@ if __name__ == "__main__":
     # Initiate training
     ###########################
 
-    train_losses, val_losses, tokens_seen, model = main(GPT_CONFIG_124M, OTHER_SETTINGS)
+    train_losses, val_losses, tokens_seen, model = main(GPT_CONFIG_SMALL, FAST_TRAINING_SETTINGS)
 
     ###########################
     # After training
     ###########################
 
     # Plot results
-    epochs_tensor = torch.linspace(0, OTHER_SETTINGS["num_epochs"], len(train_losses))
+    epochs_tensor = torch.linspace(0, FAST_TRAINING_SETTINGS["num_epochs"], len(train_losses))
     plot_losses(epochs_tensor, tokens_seen, train_losses, val_losses)
     plt.savefig("loss.pdf")
 
     # Save and load model
     torch.save(model.state_dict(), "wiki_model.pth")
-    model = GPTModel(GPT_CONFIG_124M)
+    model = GPTModel(GPT_CONFIG_SMALL)
     # model.load_state_dict(torch.load("model.pth"), weights_only=True)
     end_time = time.time()
     elapsed_time = end_time - start_time

@@ -72,13 +72,26 @@ LLM_Bootcamp_Pretrain_GPT_Wikimedia/
 
 ## Getting Started
 
-1. **Dataset Preparation**
+1. **Hugging Face Authentication**
+   Create a `.env` file in the project root and add your Hugging Face token:
+   ```bash
+   # Create .env file
+   echo "HF_TOKEN=your_hugging_face_token_here" > .env
+   ```
+   
+   To get your Hugging Face token:
+   - Sign up or login at [Hugging Face](https://huggingface.co/)
+   - Go to Settings → Access Tokens
+   - Create a new token with read access
+   - Copy the token and paste it in your .env file
+
+2. **Dataset Preparation**
    ```bash
    python gpt_dataset.py
    ```
    This script downloads and preprocesses the Wikipedia dataset.
 
-2. **Model Configuration**
+3. **Model Configuration**
    The model can be configured through parameters in `gpt_train.py`:
    - Model size (number of parameters)
    - Number of layers
@@ -86,7 +99,7 @@ LLM_Bootcamp_Pretrain_GPT_Wikimedia/
    - Learning rate
    - Batch size
 
-3. **Training Process**
+4. **Training Process**
    ```bash
    python gpt_train.py
    ```
@@ -97,7 +110,7 @@ LLM_Bootcamp_Pretrain_GPT_Wikimedia/
    - Loss tracking and visualization
    - Model checkpointing
 
-4. **Inference**
+5. **Inference**
    ```bash
    python infer.py --input "Your input text here"
    ```

@@ -2,3 +2,11 @@ __pycache__
 logs
 
 *.log
+
+*.pth
+
+wikipedia_data.txt
+
+.env
+
+.cache/

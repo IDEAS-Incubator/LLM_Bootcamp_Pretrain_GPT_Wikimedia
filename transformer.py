@@ -1,5 +1,3 @@
-
-
 import tiktoken
 import torch
 import torch.nn as nn
@@ -13,15 +11,34 @@ class GPTDatasetV1(Dataset):
         self.input_ids = []
         self.target_ids = []
 
-        # Tokenize the entire text
-        token_ids = tokenizer.encode(txt, allowed_special={"<|endoftext|>"})
-
-        # Use a sliding window to chunk the book into overlapping sequences of max_length
-        for i in range(0, len(token_ids) - max_length, stride):
-            input_chunk = token_ids[i:i + max_length]
-            target_chunk = token_ids[i + 1: i + max_length + 1]
-            self.input_ids.append(torch.tensor(input_chunk))
-            self.target_ids.append(torch.tensor(target_chunk))
+        # Check if txt is a generator (streaming mode)
+        if hasattr(txt, '__iter__') and not isinstance(txt, (str, bytes)):
+            # Process data in chunks for streamed input
+            all_tokens = []
+            for chunk in txt:
+                if isinstance(chunk, str):
+                    chunk_tokens = tokenizer.encode(chunk, allowed_special={"<|endoftext|>"})
+                    all_tokens.extend(chunk_tokens)
+                    
+                    # Process accumulated tokens when we have enough for at least one sequence
+                    while len(all_tokens) >= max_length + 1:
+                        input_chunk = all_tokens[:max_length]
+                        target_chunk = all_tokens[1:max_length+1]
+                        self.input_ids.append(torch.tensor(input_chunk))
+                        self.target_ids.append(torch.tensor(target_chunk))
+                        
+                        # Remove processed tokens with stride
+                        all_tokens = all_tokens[stride:]
+        else:
+            # Original implementation for string input
+            token_ids = tokenizer.encode(txt, allowed_special={"<|endoftext|>"})
+            
+            # Use a sliding window to chunk the book into overlapping sequences of max_length
+            for i in range(0, len(token_ids) - max_length, stride):
+                input_chunk = token_ids[i:i + max_length]
+                target_chunk = token_ids[i + 1: i + max_length + 1]
+                self.input_ids.append(torch.tensor(input_chunk))
+                self.target_ids.append(torch.tensor(target_chunk))
 
     def __len__(self):
         return len(self.input_ids)

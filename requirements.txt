@@ -3,3 +3,5 @@ matplotlib
 loguru
 tiktoken
 datasets
+python-dotenv
+huggingface-hub

@@ -48,16 +48,16 @@ if __name__ == "__main__":
     
     GPT_CONFIG_124M = {
         "vocab_size": 50257,
-        "context_length": 256,
-        "emb_dim": 768,
-        "n_heads": 12,
-        "n_layers": 12,
+        "context_length": 128,
+        "emb_dim": 256,
+        "n_heads": 4,
+        "n_layers": 4,
         "drop_rate": 0.1,
         "qkv_bias": False
     }
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model_path = "model.pth"  # Path to the saved model
+    model_path = "wiki_model.pth"  # Path to the saved model
     # input_text = "who invented wiki"
     input_text = args.input  # Take input from command line
 
