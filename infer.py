@@ -14,10 +14,10 @@ def token_ids_to_text(token_ids, tokenizer):
     return tokenizer.decode(flat.tolist())
 
 
-def load_model_and_infer(gpt_config, model_path, input_text, device,max_gen=20):
+def load_model_and_infer(gpt_config, model_path, input_text, device, max_gen=20):
     # Load the saved model
     model = GPTModel(gpt_config)
-    model.load_state_dict(torch.load(model_path,weights_only=True))
+    model.load_state_dict(torch.load(model_path, weights_only=True))
     model.to(device)
     model.eval()
 
@@ -30,7 +30,10 @@ def load_model_and_infer(gpt_config, model_path, input_text, device,max_gen=20):
     # Generate text
     with torch.no_grad():
         generated_ids = generate_text_simple(
-            model=model, idx=encoded_input, max_new_tokens=max_gen, context_size=model.pos_emb.weight.shape[0]
+            model=model,
+            idx=encoded_input,
+            max_new_tokens=max_gen,
+            context_size=model.pos_emb.weight.shape[0],
         )
 
     # Decode the output back to text
@@ -39,28 +42,52 @@ def load_model_and_infer(gpt_config, model_path, input_text, device,max_gen=20):
 
 
 if __name__ == "__main__":
-        # Define argument parser
+    # Define argument parser
     import argparse
+    import torch
+
     parser = argparse.ArgumentParser(description="Inference for GPT Model")
-    parser.add_argument('--input', type=str, required=True, help='Input text for inference')
+    parser.add_argument(
+        "--input", type=str, required=True, help="Input text for inference"
+    )
+    parser.add_argument(
+        "--model_config", type=str, default="small", help="Model size: small or medium"
+    )
 
     args = parser.parse_args()
-    
-    GPT_CONFIG_124M = {
-        "vocab_size": 50257,
-        "context_length": 128,
-        "emb_dim": 256,
-        "n_heads": 4,
-        "n_layers": 4,
-        "drop_rate": 0.1,
-        "qkv_bias": False
-    }
+
+    # Define different model configurations
+    from setting import MODEL_CONFIGS
+
+    # Get model config
+    if args.model_config not in MODEL_CONFIGS:
+        raise ValueError(
+            f"Invalid model_config '{args.model_config}'. Choose from: {list(MODEL_CONFIGS.keys())}"
+        )
+
+    GPT_CONFIG = MODEL_CONFIGS[args.model_config]
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model_path = "wiki_model.pth"  # Path to the saved model
-    # input_text = "who invented wiki"
     input_text = args.input  # Take input from command line
 
-    # Perform inference
-    generated_text = load_model_and_infer(GPT_CONFIG_124M, model_path, input_text, device)
-    print("Generated Text:", generated_text)
+    # List of different models trained with same config but different settings
+    model_names = {
+        "small": [
+            "model_small_slow_wiki_1K_Lines.txt.pth",
+            "model_small_fast_wiki_1K_Lines.txt.pth",
+        ],
+        "medium": [
+            "model_medium_slow_wiki_1K_Lines.txt.pth",
+            "model_medium_fast_wiki_1K_Lines.txt.pth",
+        ],
+    }
+
+    # Loop through all models and run inference
+    for model_name in model_names[args.model_config]:
+        model_path = f"models/{model_name}"
+        print("=" * 50)
+        print(f"🔍 Responding Model Name: {model_name}")
+        generated_text = load_model_and_infer(
+            GPT_CONFIG, model_path, input_text, device
+        )
+        print("Generated Text:", generated_text)

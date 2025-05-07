@@ -10,3 +10,5 @@ wikipedia_data.txt
 .env
 
 .cache/
+
+loss_*.pdf
