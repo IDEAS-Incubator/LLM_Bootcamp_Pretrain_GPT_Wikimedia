@@ -189,7 +189,7 @@ def plot_losses(epochs_seen, tokens_seen, train_losses, val_losses):
     # plt.show()
 
 
-def main(gpt_config, settings, filename="wiki_1K_Lines.txt"):
+def main(gpt_config, settings, filename="dataset/wiki_1K_Lines.txt"):
 
     torch.manual_seed(123)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
