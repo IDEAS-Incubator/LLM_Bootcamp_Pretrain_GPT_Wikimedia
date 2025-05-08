@@ -3,10 +3,11 @@ from pathlib import Path
 from loguru import logger
 from datasets import load_dataset
 from tqdm import tqdm
+from config import DATAFOLDER
 
 
 def get_data(
-    file_path="wikipedia_data.txt",
+    file_path=f"{DATAFOLDER}/wikipedia_data.txt",
     chunk_size=1000,
     max_articles=None,
     stream_mode=True,
@@ -105,7 +106,7 @@ def download_data():
     DOWNLOAD_DIR = os.getcwd()
 
     # Create the download directory if it doesn't exist
-    os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+    os.makedirs(f"{DOWNLOAD_DIR}/{DATAFOLDER}", exist_ok=True)
 
     try:
         # Download the file from Hugging Face

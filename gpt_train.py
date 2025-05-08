@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import os
 import torch
-import urllib.request
 import tiktoken
 
 
@@ -280,29 +279,25 @@ def main(gpt_config, settings, filename="wiki_1K_Lines.txt"):
     return train_losses, val_losses, tokens_seen, model
 
 
-import os
-import time
-import torch
-import matplotlib.pyplot as plt
-
-# Assuming GPTModel, main, and plot_losses are defined elsewhere
-
 if __name__ == "__main__":
 
     # Start timing
     start_time = time.time()
 
-    from setting import MODEL_CONFIGS, TRAINING_SETTINGS  # model and training setting
+    from config import (
+        MODEL_CONFIGS,
+        TRAINING_SETTINGS,
+        DATAFOLDER,
+        MODEL_DIR,
+    )  # model and training setting
 
     # listing various data sources to train LLM Model
     datasources = [
-        "wiki_1K_Lines.txt",
-        #     "wiki_1M.txt",
-        #     "wiki_10M.txt",
-        #     "wikipedia_data.txt",  # 20 Gb Data set
+        f"{DATAFOLDER}/wiki_1K_Lines.txt",
+        f"{DATAFOLDER}/wiki_1M.txt",
+        f"{DATAFOLDER}/wiki_10M.txt",
+        f"{DATAFOLDER}/wikipedia_data.txt",  # 20 Gb Data set
     ]
-
-    MODEL_DIR = "models"
 
     # Create the Model directory if it doesn't exist
     os.makedirs(MODEL_DIR, exist_ok=True)
@@ -333,7 +328,7 @@ if __name__ == "__main__":
                 )
                 plot_losses(epochs_tensor, tokens_seen, train_losses, val_losses)
                 plt.title(f"{config_name} + {setting_name} - {datapath}")
-                plt.savefig(f"loss_{config_name}_{setting_name}_{datapath}.pdf")
+                plt.savefig(f"result/loss_{config_name}_{setting_name}_{datapath}.pdf")
                 plt.clf()
 
                 # Save and load model

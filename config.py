@@ -1,4 +1,4 @@
-# Different model configurations for student comparison
+# Different model configurations for  comparison
 MODEL_CONFIGS = {
     "small": {
         "vocab_size": 50257,  # Vocabulary size
@@ -37,3 +37,7 @@ TRAINING_SETTINGS = {
     },
     # Add more training settings as needed
 }
+
+#  Folder CONFIG
+DATAFOLDER = "dataset"
+MODEL_DIR = "models"
