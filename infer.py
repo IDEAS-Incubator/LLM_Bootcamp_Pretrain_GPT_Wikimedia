@@ -57,7 +57,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Define different model configurations
-    from setting import MODEL_CONFIGS
+    from config import MODEL_CONFIGS
 
     # Get model config
     if args.model_config not in MODEL_CONFIGS:
