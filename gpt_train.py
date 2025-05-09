@@ -326,16 +326,35 @@ if __name__ == "__main__":
                 epochs_tensor = torch.linspace(
                     0, TRAIN_SETTINGS["num_epochs"], len(train_losses)
                 )
+                # Ensure the directory exists before saving the plot
+                output_relative_path = (
+                    f"result/loss_{config_name}_{setting_name}_{datapath}.pdf"
+                )
+                cwd = os.getcwd()
+                output_full_path = os.path.join(cwd, output_relative_path)
+
+                # Create the directory if it doesn't exist
+                output_dir = os.path.dirname(output_full_path)
+                os.makedirs(output_dir, exist_ok=True)
+
+                # Save Plot training and validation loss against epochs
                 plot_losses(epochs_tensor, tokens_seen, train_losses, val_losses)
                 plt.title(f"{config_name} + {setting_name} - {datapath}")
-                plt.savefig(f"result/loss_{config_name}_{setting_name}_{datapath}.pdf")
+                plt.savefig(output_full_path)
                 plt.clf()
 
                 # Save and load model
-                model_path = (
-                    f"{MODEL_DIR}/model_{config_name}_{setting_name}_{datapath}.pth"
+                model_path = os.path.join(
+                    MODEL_DIR, f"model_{config_name}_{setting_name}_{datapath}.pth"
                 )
+                model_dir = os.path.dirname(model_path)
+
+                # Create the directory if it doesn't exist
+                os.makedirs(model_dir, exist_ok=True)
+
+                # Save the model
                 torch.save(model.state_dict(), model_path)
+
                 model = GPTModel(GPT_CONFIG)
                 # model.load_state_dict(torch.load("model.pth"), weights_only=True)
 
