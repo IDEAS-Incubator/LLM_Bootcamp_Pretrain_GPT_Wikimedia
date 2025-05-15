@@ -114,7 +114,7 @@ def train_model_simple(
     eval_iter,
     start_context,
     tokenizer,
-    checkpoint_dir="model/model_checkpoints",  # New parameter for checkpoint directory
+    checkpoint_dir="models/model_checkpoints",  # New parameter for checkpoint directory
 ):
     # Initialize lists to track losses and tokens seen
     train_losses, val_losses, track_tokens_seen = [], [], []
@@ -293,7 +293,7 @@ def main(
 
     # Create checkpoint directory based on model config and settings
     checkpoint_dir = os.path.join(
-        "model/model_checkpoints", f"{config_name}_{setting_name}"
+        f"{MODEL_DIR}/model_checkpoints", f"{config_name}_{setting_name}"
     )
 
     # More frequent evaluation for faster feedback
