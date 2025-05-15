@@ -9,8 +9,7 @@ from transformer import GPTModel, create_dataloader_v1, generate_text_simple
 from gpt_dataset import get_data
 from loguru import logger
 import time
-
-logger.add("logs/file_1.log", rotation="500 MB")
+from datetime import datetime
 
 
 def text_to_token_ids(text, tokenizer):
@@ -293,9 +292,9 @@ if __name__ == "__main__":
 
     # listing various data sources to train LLM Model
     datasources = [
-        f"{DATAFOLDER}/wiki_1K_Lines.txt",
-        f"{DATAFOLDER}/wiki_1M.txt",
-        f"{DATAFOLDER}/wiki_10M.txt",
+        # f"{DATAFOLDER}/wiki_1K_Lines.txt",
+        # f"{DATAFOLDER}/wiki_1M.txt",
+        # f"{DATAFOLDER}/wiki_10M.txt",
         f"{DATAFOLDER}/wikipedia_data.txt",  # 20 Gb Data set
     ]
 
@@ -305,8 +304,13 @@ if __name__ == "__main__":
     for config_name, GPT_CONFIG in MODEL_CONFIGS.items():
         for setting_name, TRAIN_SETTINGS in TRAINING_SETTINGS.items():
             for datapath in datasources:
+                timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                logger.add(
+                    f"logs/{config_name}_{setting_name}_{datapath}_{timestamp}.log",
+                    rotation="500 MB",
+                )
 
-                print(
+                logger.info(
                     f"\n🔧 Training Model: {config_name}, Setting: {setting_name}, Data: {datapath}"
                 )
 
@@ -360,4 +364,4 @@ if __name__ == "__main__":
 
                 end_time = time.time()
                 elapsed_time = end_time - start_time
-                print(f"Training completed in: {elapsed_time / 60:.2f} minutes")
+                logger.info(f"Training completed in: {elapsed_time / 60:.2f} minutes")
