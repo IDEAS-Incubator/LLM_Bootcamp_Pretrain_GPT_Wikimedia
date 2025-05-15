@@ -114,11 +114,17 @@ def train_model_simple(
     eval_iter,
     start_context,
     tokenizer,
+    checkpoint_dir="model/model_checkpoints",  # New parameter for checkpoint directory
 ):
     # Initialize lists to track losses and tokens seen
     train_losses, val_losses, track_tokens_seen = [], [], []
     tokens_seen = 0
     global_step = -1
+
+    # Create timestamp for this training run
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    run_checkpoint_dir = os.path.join(checkpoint_dir, timestamp)
+    os.makedirs(run_checkpoint_dir, exist_ok=True)
 
     # Main training loop
     for epoch in range(num_epochs):
@@ -163,6 +169,25 @@ def train_model_simple(
                     f"Train loss {train_loss:.3f}, Val loss {val_loss:.3f}"
                 )
 
+        # Save model checkpoint after each epoch with timestamp
+        epoch_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        checkpoint_path = os.path.join(
+            run_checkpoint_dir, f"model_epoch_{epoch+1}_{epoch_timestamp}.pth"
+        )
+        torch.save(
+            {
+                "epoch": epoch + 1,
+                "model_state_dict": model.state_dict(),
+                "optimizer_state_dict": optimizer.state_dict(),
+                "train_loss": train_losses[-1] if train_losses else None,
+                "val_loss": val_losses[-1] if val_losses else None,
+                "tokens_seen": tokens_seen,
+                "timestamp": epoch_timestamp,
+            },
+            checkpoint_path,
+        )
+        logger.info(f"Saved checkpoint for epoch {epoch+1} to {checkpoint_path}")
+
         # Print a sample text after each epoch
         generate_and_print_sample(model, tokenizer, device, start_context)
 
@@ -188,8 +213,13 @@ def plot_losses(epochs_seen, tokens_seen, train_losses, val_losses):
     # plt.show()
 
 
-def main(gpt_config, settings, filename="dataset/wiki_1K_Lines.txt"):
-
+def main(
+    gpt_config,
+    settings,
+    filename="dataset/wiki_1K_Lines.txt",
+    config_name=None,
+    setting_name=None,
+):
     torch.manual_seed(123)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -261,6 +291,11 @@ def main(gpt_config, settings, filename="dataset/wiki_1K_Lines.txt"):
 
     tokenizer = tiktoken.get_encoding("gpt2")
 
+    # Create checkpoint directory based on model config and settings
+    checkpoint_dir = os.path.join(
+        "model/model_checkpoints", f"{config_name}_{setting_name}"
+    )
+
     # More frequent evaluation for faster feedback
     train_losses, val_losses, tokens_seen = train_model_simple(
         model,
@@ -273,6 +308,7 @@ def main(gpt_config, settings, filename="dataset/wiki_1K_Lines.txt"):
         eval_iter=1,
         start_context="Every effort moves you",
         tokenizer=tokenizer,
+        checkpoint_dir=checkpoint_dir,  # Pass the checkpoint directory
     )
 
     return train_losses, val_losses, tokens_seen, model
@@ -293,9 +329,9 @@ if __name__ == "__main__":
     # listing various data sources to train LLM Model
     datasources = [
         # f"{DATAFOLDER}/wiki_1K_Lines.txt",
-        # f"{DATAFOLDER}/wiki_1M.txt",
+        f"{DATAFOLDER}/wiki_1M.txt",
         # f"{DATAFOLDER}/wiki_10M.txt",
-        f"{DATAFOLDER}/wikipedia_data.txt",  # 20 Gb Data set
+        # f"{DATAFOLDER}/wikipedia_data.txt",  # 20 Gb Data set
     ]
 
     # Create the Model directory if it doesn't exist
@@ -304,11 +340,18 @@ if __name__ == "__main__":
     for config_name, GPT_CONFIG in MODEL_CONFIGS.items():
         for setting_name, TRAIN_SETTINGS in TRAINING_SETTINGS.items():
             for datapath in datasources:
+                # Create timestamp for this training run
                 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-                logger.add(
-                    f"logs/{config_name}_{setting_name}_{datapath}_{timestamp}.log",
-                    rotation="500 MB",
+
+                # Create a unique run directory
+                run_dir = os.path.join(
+                    MODEL_DIR, f"{config_name}_{setting_name}_{timestamp}"
                 )
+                os.makedirs(run_dir, exist_ok=True)
+
+                # Set up logging for this run
+                log_file = os.path.join(run_dir, f"training_{timestamp}.log")
+                logger.add(log_file, rotation="500 MB")
 
                 logger.info(
                     f"\n🔧 Training Model: {config_name}, Setting: {setting_name}, Data: {datapath}"
@@ -319,7 +362,7 @@ if __name__ == "__main__":
                 ###########################
 
                 train_losses, val_losses, tokens_seen, model = main(
-                    GPT_CONFIG, TRAIN_SETTINGS, datapath
+                    GPT_CONFIG, TRAIN_SETTINGS, datapath, config_name, setting_name
                 )
 
                 ###########################
@@ -330,37 +373,30 @@ if __name__ == "__main__":
                 epochs_tensor = torch.linspace(
                     0, TRAIN_SETTINGS["num_epochs"], len(train_losses)
                 )
-                # Ensure the directory exists before saving the plot
-                output_relative_path = (
-                    f"result/loss_{config_name}_{setting_name}_{datapath}.pdf"
-                )
-                cwd = os.getcwd()
-                output_full_path = os.path.join(cwd, output_relative_path)
 
-                # Create the directory if it doesn't exist
-                output_dir = os.path.dirname(output_full_path)
-                os.makedirs(output_dir, exist_ok=True)
-
-                # Save Plot training and validation loss against epochs
+                # Save plot in the run directory
+                plot_path = os.path.join(run_dir, f"loss_plot_{timestamp}.pdf")
                 plot_losses(epochs_tensor, tokens_seen, train_losses, val_losses)
                 plt.title(f"{config_name} + {setting_name} - {datapath}")
-                plt.savefig(output_full_path)
+                plt.savefig(plot_path)
                 plt.clf()
 
-                # Save and load model
-                model_path = os.path.join(
-                    MODEL_DIR, f"model_{config_name}_{setting_name}_{datapath}.pth"
+                # Save final model in the run directory
+                model_path = os.path.join(run_dir, f"final_model_{timestamp}.pth")
+                torch.save(
+                    {
+                        "model_state_dict": model.state_dict(),
+                        "config_name": config_name,
+                        "setting_name": setting_name,
+                        "datapath": datapath,
+                        "final_train_loss": train_losses[-1] if train_losses else None,
+                        "final_val_loss": val_losses[-1] if val_losses else None,
+                        "total_tokens_seen": tokens_seen[-1] if tokens_seen else None,
+                        "timestamp": timestamp,
+                    },
+                    model_path,
                 )
-                model_dir = os.path.dirname(model_path)
-
-                # Create the directory if it doesn't exist
-                os.makedirs(model_dir, exist_ok=True)
-
-                # Save the model
-                torch.save(model.state_dict(), model_path)
-
-                model = GPTModel(GPT_CONFIG)
-                # model.load_state_dict(torch.load("model.pth"), weights_only=True)
+                logger.info(f"Saved final model to {model_path}")
 
                 end_time = time.time()
                 elapsed_time = end_time - start_time
