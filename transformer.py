@@ -4,39 +4,39 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 
 
-
-
 class GPTDatasetV1(Dataset):
     def __init__(self, txt, tokenizer, max_length, stride):
         self.input_ids = []
         self.target_ids = []
 
         # Check if txt is a generator (streaming mode)
-        if hasattr(txt, '__iter__') and not isinstance(txt, (str, bytes)):
+        if hasattr(txt, "__iter__") and not isinstance(txt, (str, bytes)):
             # Process data in chunks for streamed input
             all_tokens = []
             for chunk in txt:
                 if isinstance(chunk, str):
-                    chunk_tokens = tokenizer.encode(chunk, allowed_special={"<|endoftext|>"})
+                    chunk_tokens = tokenizer.encode(
+                        chunk, allowed_special={"<|endoftext|>"}
+                    )
                     all_tokens.extend(chunk_tokens)
-                    
+
                     # Process accumulated tokens when we have enough for at least one sequence
                     while len(all_tokens) >= max_length + 1:
                         input_chunk = all_tokens[:max_length]
-                        target_chunk = all_tokens[1:max_length+1]
+                        target_chunk = all_tokens[1 : max_length + 1]
                         self.input_ids.append(torch.tensor(input_chunk))
                         self.target_ids.append(torch.tensor(target_chunk))
-                        
+
                         # Remove processed tokens with stride
                         all_tokens = all_tokens[stride:]
         else:
             # Original implementation for string input
             token_ids = tokenizer.encode(txt, allowed_special={"<|endoftext|>"})
-            
+
             # Use a sliding window to chunk the book into overlapping sequences of max_length
             for i in range(0, len(token_ids) - max_length, stride):
-                input_chunk = token_ids[i:i + max_length]
-                target_chunk = token_ids[i + 1: i + max_length + 1]
+                input_chunk = token_ids[i : i + max_length]
+                target_chunk = token_ids[i + 1 : i + max_length + 1]
                 self.input_ids.append(torch.tensor(input_chunk))
                 self.target_ids.append(torch.tensor(target_chunk))
 
@@ -47,8 +47,15 @@ class GPTDatasetV1(Dataset):
         return self.input_ids[idx], self.target_ids[idx]
 
 
-def create_dataloader_v1(txt, batch_size=4, max_length=256,
-                         stride=128, shuffle=True, drop_last=True, num_workers=0):
+def create_dataloader_v1(
+    txt,
+    batch_size=4,
+    max_length=256,
+    stride=128,
+    shuffle=True,
+    drop_last=True,
+    num_workers=0,
+):
     # Initialize the tokenizer
     tokenizer = tiktoken.get_encoding("gpt2")
 
@@ -57,10 +64,14 @@ def create_dataloader_v1(txt, batch_size=4, max_length=256,
 
     # Create dataloader
     dataloader = DataLoader(
-        dataset, batch_size=batch_size, shuffle=shuffle, drop_last=drop_last, num_workers=num_workers)
+        dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        drop_last=drop_last,
+        num_workers=num_workers,
+    )
 
     return dataloader
-
 
 
 class MultiHeadAttention(nn.Module):
@@ -70,14 +81,18 @@ class MultiHeadAttention(nn.Module):
 
         self.d_out = d_out
         self.num_heads = num_heads
-        self.head_dim = d_out // num_heads  # Reduce the projection dim to match desired output dim
+        self.head_dim = (
+            d_out // num_heads
+        )  # Reduce the projection dim to match desired output dim
 
         self.W_query = nn.Linear(d_in, d_out, bias=qkv_bias)
         self.W_key = nn.Linear(d_in, d_out, bias=qkv_bias)
         self.W_value = nn.Linear(d_in, d_out, bias=qkv_bias)
         self.out_proj = nn.Linear(d_out, d_out)  # Linear layer to combine head outputs
         self.dropout = nn.Dropout(dropout)
-        self.register_buffer('mask', torch.triu(torch.ones(context_length, context_length), diagonal=1))
+        self.register_buffer(
+            "mask", torch.triu(torch.ones(context_length, context_length), diagonal=1)
+        )
 
     def forward(self, x):
         b, num_tokens, d_in = x.shape
@@ -106,7 +121,7 @@ class MultiHeadAttention(nn.Module):
         # Use the mask to fill attention scores
         attn_scores.masked_fill_(mask_bool, -torch.inf)
 
-        attn_weights = torch.softmax(attn_scores / keys.shape[-1]**0.5, dim=-1)
+        attn_weights = torch.softmax(attn_scores / keys.shape[-1] ** 0.5, dim=-1)
         attn_weights = self.dropout(attn_weights)
 
         # Shape: (b, num_tokens, num_heads, head_dim)
@@ -138,10 +153,17 @@ class GELU(nn.Module):
         super().__init__()
 
     def forward(self, x):
-        return 0.5 * x * (1 + torch.tanh(
-            torch.sqrt(torch.tensor(2.0 / torch.pi)) *
-            (x + 0.044715 * torch.pow(x, 3))
-        ))
+        return (
+            0.5
+            * x
+            * (
+                1
+                + torch.tanh(
+                    torch.sqrt(torch.tensor(2.0 / torch.pi))
+                    * (x + 0.044715 * torch.pow(x, 3))
+                )
+            )
+        )
 
 
 class FeedForward(nn.Module):
@@ -166,7 +188,8 @@ class TransformerBlock(nn.Module):
             context_length=cfg["context_length"],
             num_heads=cfg["n_heads"],
             dropout=cfg["drop_rate"],
-            qkv_bias=cfg["qkv_bias"])
+            qkv_bias=cfg["qkv_bias"],
+        )
         self.ff = FeedForward(cfg)
         self.norm1 = LayerNorm(cfg["emb_dim"])
         self.norm2 = LayerNorm(cfg["emb_dim"])
@@ -176,7 +199,7 @@ class TransformerBlock(nn.Module):
         # Shortcut connection for attention block
         shortcut = x
         x = self.norm1(x)
-        x = self.att(x)   # Shape [batch_size, num_tokens, emb_size]
+        x = self.att(x)  # Shape [batch_size, num_tokens, emb_size]
         x = self.drop_shortcut(x)
         x = x + shortcut  # Add the original input back
 
@@ -198,7 +221,8 @@ class GPTModel(nn.Module):
         self.drop_emb = nn.Dropout(cfg["drop_rate"])
 
         self.trf_blocks = nn.Sequential(
-            *[TransformerBlock(cfg) for _ in range(cfg["n_layers"])])
+            *[TransformerBlock(cfg) for _ in range(cfg["n_layers"])]
+        )
 
         self.final_norm = LayerNorm(cfg["emb_dim"])
         self.out_head = nn.Linear(cfg["emb_dim"], cfg["vocab_size"], bias=False)
@@ -215,42 +239,59 @@ class GPTModel(nn.Module):
         return logits
 
 
-def generate_text_simple(model, idx, max_new_tokens, context_size):
-    # idx is (B, T) array of indices in the current context
-    for _ in range(max_new_tokens):
+import torch.nn.functional as F
 
-        # Crop current context if it exceeds the supported context size
-        # E.g., if LLM supports only 5 tokens, and the context size is 10
-        # then only the last 5 tokens are used as context
-        idx_cond = idx[:, -context_size:]
 
-        # Get the predictions
-        with torch.no_grad():
-            logits = model(idx_cond)
+def generate_text_simple(
+    model,
+    idx,
+    max_new_tokens: int,
+    context_size: int,
+    temperature=1.0,
+    stream=False,
+    tokenizer=None,
+):
+    """
+    If stream=True: return a generator that yields decoded tokens one at a time.
+    If stream=False: return the full generated tensor.
+    """
+    if tokenizer is None:
+        raise ValueError("Tokenizer must be provided for decoding.")
 
-        # Focus only on the last time step
-        # (batch, n_token, vocab_size) becomes (batch, vocab_size)
-        logits = logits[:, -1, :]
+    def _gen():
+        nonlocal idx
+        for _ in range(max_new_tokens):
+            idx_cond = idx[:, -context_size:]
+            with torch.no_grad():
+                logits = model(idx_cond)
+            logits = logits[:, -1, :] / temperature
+            probs = F.softmax(logits, dim=-1)
+            idx_next = torch.multinomial(probs, num_samples=1)
+            idx = torch.cat((idx, idx_next), dim=1)
+            yield tokenizer.decode(idx_next[0].tolist())
 
-        # Get the idx of the vocab entry with the highest logits value
-        idx_next = torch.argmax(logits, dim=-1, keepdim=True)  # (batch, 1)
+    if stream:
+        return _gen()
+    else:
+        from loguru import logger
 
-        # Append sampled index to the running sequence
-        idx = torch.cat((idx, idx_next), dim=1)  # (batch, n_tokens+1)
-
-    return idx
+        logger.info("stream=False")
+        # run through generator silently, but collect idx
+        for _ in _gen():
+            pass
+        return idx
 
 
 if __name__ == "__main__":
 
     GPT_CONFIG_124M = {
-        "vocab_size": 50257,     # Vocabulary size
+        "vocab_size": 50257,  # Vocabulary size
         "context_length": 1024,  # Context length
-        "emb_dim": 768,          # Embedding dimension
-        "n_heads": 12,           # Number of attention heads
-        "n_layers": 12,          # Number of layers
-        "drop_rate": 0.1,        # Dropout rate
-        "qkv_bias": False        # Query-Key-Value bias
+        "emb_dim": 768,  # Embedding dimension
+        "n_heads": 12,  # Number of attention heads
+        "n_layers": 12,  # Number of layers
+        "drop_rate": 0.1,  # Dropout rate
+        "qkv_bias": False,  # Query-Key-Value bias
     }
 
     torch.manual_seed(123)
@@ -272,7 +313,7 @@ if __name__ == "__main__":
         model=model,
         idx=encoded_tensor,
         max_new_tokens=10,
-        context_size=GPT_CONFIG_124M["context_length"]
+        context_size=GPT_CONFIG_124M["context_length"],
     )
     decoded_text = tokenizer.decode(out.squeeze(0).tolist())
 

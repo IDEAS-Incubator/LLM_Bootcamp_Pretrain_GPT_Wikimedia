@@ -33,21 +33,30 @@ MODEL_CONFIGS = {
 
 # Different training settings for faster/slower training comparisons
 TRAINING_SETTINGS = {
-    "foundation": {
-        "learning_rate": 3e-4,
-        "num_epochs": 10,
-        "batch_size": 6,
-        "weight_decay": 0.01,
-        "warmup_steps": 1000,
-        "gradient_accumulation_steps": 4,
-        "max_grad_norm": 1.0,
-    },
-    # "fast": {
-    #     "learning_rate": 1e-3,  # Higher learning rate for faster convergence
-    #     "num_epochs": 2,  # Fewer epochs
-    #     "batch_size": 4,  # Larger batch size if memory allows
-    #     "weight_decay": 0.1,
+    # "foundation": {
+    #     "learning_rate": 3e-4,
+    #     "num_epochs": 10,
+    #     "batch_size": 4,
+    #     "weight_decay": 0.01,
+    #     "warmup_steps": 1000,
+    #     "gradient_accumulation_steps": 4,
+    #     "max_grad_norm": 1.0,
     # },
+    # "Foundation better_quality": {
+    #     "learning_rate": 2e-4,  # Slightly lower for more stable training
+    #     "num_epochs": 50,  # Train for more epochs to improve generalization
+    #     "batch_size": 4,  # Reduce if GPU memory is limited (increase if possible)
+    #     "weight_decay": 0.01,
+    #     "warmup_steps": 2000,  # Longer warmup for better convergence
+    #     "gradient_accumulation_steps": 8,  # Effective batch size = batch_size * grad_accum_steps
+    #     "max_grad_norm": 1.0,
+    # },
+    "fast": {
+        "learning_rate": 1e-3,  # Higher learning rate for faster convergence
+        "num_epochs": 2,  # Fewer epochs
+        "batch_size": 4,  # Larger batch size if memory allows
+        "weight_decay": 0.1,
+    },
     # "slow": {
     #     "learning_rate": 5e-4,
     #     "num_epochs": 4,
@@ -60,3 +69,12 @@ TRAINING_SETTINGS = {
 #  Folder CONFIG
 DATAFOLDER = "dataset"
 MODEL_DIR = "models"
+
+
+# listing various data sources to train LLM Model
+DATA_SOURCE = [
+    f"{DATAFOLDER}/wiki_1K_Lines.txt",
+    # f"{DATAFOLDER}/wiki_1M.txt",
+    # f"{DATAFOLDER}/wiki_10M.txt",
+    # f"{DATAFOLDER}/wikipedia_data.txt",  # 20 Gb Data set
+]

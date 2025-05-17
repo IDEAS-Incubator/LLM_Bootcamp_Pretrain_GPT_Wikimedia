@@ -66,9 +66,48 @@ LLM_Bootcamp_Pretrain_GPT_Wikimedia/
 ├── gpt_dataset.py    # Dataset handling
 ├── transformer.py    # Transformer model implementation
 ├── infer.py          # Inference script
+├── config.py         # Model and training configurations
 ├── requirements.txt  # Dependencies
 └── assets/          # Project resources
 ```
+
+## Configuration Details
+
+The `config.py` file contains predefined configurations for the model and training process. These configurations allow you to easily switch between different setups for experimentation.
+
+### Model Configurations
+The `MODEL_CONFIGS` dictionary defines various model architectures. For example:
+- `gpt2_original`: Mimics the GPT-2 small model with 124M parameters.
+  ```python
+  "gpt2_original": {
+      "vocab_size": 50257,
+      "context_length": 1024,
+      "emb_dim": 768,
+      "n_heads": 12,
+      "n_layers": 12,
+      "drop_rate": 0.1,
+      "qkv_bias": True,
+  }
+  ```
+
+### Training Settings
+The `TRAINING_SETTINGS` dictionary provides different training setups. For example:
+- `Foundation better_quality`: Optimized for better generalization with a lower learning rate and more epochs.
+  ```python
+  "Foundation better_quality": {
+      "learning_rate": 2e-4,
+      "num_epochs": 50,
+      "batch_size": 4,
+      "weight_decay": 0.01,
+      "warmup_steps": 2000,
+      "gradient_accumulation_steps": 8,
+      "max_grad_norm": 1.0,
+  }
+  ```
+
+### Folder Configuration
+- `DATAFOLDER`: Directory for storing datasets.
+- `MODEL_DIR`: Directory for saving trained models.
 
 ## Getting Started
 
@@ -111,10 +150,26 @@ LLM_Bootcamp_Pretrain_GPT_Wikimedia/
    - Model checkpointing
 
 5. **Inference**
+   Use the `infer.py` script to generate text from a trained model.
+
+   ### Steps for Inference:
+   - Ensure the trained model is saved in the `models/` directory.
+   - Run the following command:
+     ```bash
+     python infer.py --input "Your input text here" --model_config gpt2_original --max_gen 50 --temperature 1.0
+     ```
+     - `--input`: The input text prompt.
+     - `--model_config`: The model configuration key from `config.py`.
+     - `--max_gen`: Number of tokens to generate.
+     - `--temperature`: Sampling temperature for text generation.
+     - `--stream`: Add this flag to stream output tokens in real-time.
+
+   Example:
    ```bash
-   python infer.py --input "Your input text here"
+   python infer.py --input "Once upon a time" --model_config gpt2_original --max_gen 100 --temperature 0.8
    ```
-   Test your trained model by generating text from prompts.
+
+   The generated text will be displayed in the terminal.
 
 ## Training Details
 
@@ -131,7 +186,6 @@ LLM_Bootcamp_Pretrain_GPT_Wikimedia/
 - Learning rate schedule
 - Memory usage
 - Training speed (tokens/second)
-
 
 ## Resources for Further Learning
 

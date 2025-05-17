@@ -6,21 +6,11 @@ import tiktoken
 
 # Import from local files
 from transformer import GPTModel, create_dataloader_v1, generate_text_simple
+from encode_decode import text_to_token_ids, token_ids_to_text
 from gpt_dataset import get_data
 from loguru import logger
 import time
 from datetime import datetime
-
-
-def text_to_token_ids(text, tokenizer):
-    encoded = tokenizer.encode(text)
-    encoded_tensor = torch.tensor(encoded).unsqueeze(0)  # add batch dimension
-    return encoded_tensor
-
-
-def token_ids_to_text(token_ids, tokenizer):
-    flat = token_ids.squeeze(0)  # remove batch dimension
-    return tokenizer.decode(flat.tolist())
 
 
 def calc_loss_batch(input_batch, target_batch, model, device):
@@ -94,12 +84,26 @@ def generate_and_print_sample(model, tokenizer, device, start_context):
     model.eval()
     context_size = model.pos_emb.weight.shape[0]
     encoded = text_to_token_ids(start_context, tokenizer).to(device)
+
     with torch.no_grad():
         token_ids = generate_text_simple(
-            model=model, idx=encoded, max_new_tokens=50, context_size=context_size
+            model=model,
+            idx=encoded,
+            max_new_tokens=50,
+            context_size=context_size,
+            temperature=1.0,
+            stream=False,
+            tokenizer=tokenizer,
         )
-        decoded_text = token_ids_to_text(token_ids, tokenizer)
-        logger.debug(decoded_text.replace("\n", " "))  # Compact print format
+
+        if isinstance(token_ids, torch.Tensor):  # Check if we got back a tensor
+            decoded_text = token_ids_to_text(token_ids, tokenizer)
+            logger.debug(decoded_text.replace("\n", " "))
+        else:
+            logger.warning(
+                "Expected tensor from generate_text_simple, but got generator or None."
+            )
+
     model.train()
 
 
@@ -322,24 +326,16 @@ if __name__ == "__main__":
     from config import (
         MODEL_CONFIGS,
         TRAINING_SETTINGS,
-        DATAFOLDER,
         MODEL_DIR,
+        DATA_SOURCE,
     )  # model and training setting
-
-    # listing various data sources to train LLM Model
-    datasources = [
-        # f"{DATAFOLDER}/wiki_1K_Lines.txt",
-        f"{DATAFOLDER}/wiki_1M.txt",
-        # f"{DATAFOLDER}/wiki_10M.txt",
-        # f"{DATAFOLDER}/wikipedia_data.txt",  # 20 Gb Data set
-    ]
 
     # Create the Model directory if it doesn't exist
     os.makedirs(MODEL_DIR, exist_ok=True)
 
     for config_name, GPT_CONFIG in MODEL_CONFIGS.items():
         for setting_name, TRAIN_SETTINGS in TRAINING_SETTINGS.items():
-            for datapath in datasources:
+            for datapath in DATA_SOURCE:
                 # Create timestamp for this training run
                 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
