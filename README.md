@@ -2,6 +2,14 @@
 
 This project provides a hands-on learning experience for understanding and implementing a GPT (Generative Pre-trained Transformer) model from scratch. By training on Wikipedia data, you'll learn the fundamentals of transformer architecture, language modeling, and deep learning best practices.
 
+
+## WikiMedia GPT Model
+
+Below is a demonstration of the GPT model's inference process:
+
+<video src="assest/infer.mp4" ></video>
+
+
 ## Learning Objectives
 
 By completing this project, you will:
