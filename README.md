@@ -7,7 +7,7 @@ This project provides a hands-on learning experience for understanding and imple
 
 Below is a demonstration of the GPT model's inference process:
 
-<video src="assest/infer.mp4" ></video>
+![Inference Demo](assest/infer.gif)
 
 
 ## Learning Objectives
