@@ -179,6 +179,28 @@ The `TRAINING_SETTINGS` dictionary provides different training setups. For examp
 
    The generated text will be displayed in the terminal.
 
+6. Export Model to Hugging Face
+
+```bash
+python export_to_hf.py
+```
+
+This script saves and pushes the trained model, config, tokenizer config, and code to the Hugging Face Hub.
+
+---
+
+###  Run Inference from Hugging Face
+
+```bash
+python hf_infer.py
+```
+
+This script:
+- Downloads the model from Hugging Face
+- Loads the custom architecture from `modeling_gpt2_custom.py`
+- Runs text generation using your prompt
+
+
 ## Training Details
 
 ### Hyperparameters
